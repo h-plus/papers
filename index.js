@@ -4,13 +4,13 @@
  */
 
 var responseTime = require('koa-response-time');
-var ratelimit = require('koa-ratelimit');
 var compress = require('koa-compress');
 var logger = require('koa-logger');
+var staticCache = require('koa-static-cache');
 var router = require('koa-router');
 var load = require('./lib/load');
-var redis = require('redis');
 var koa = require('koa');
+var path = require('path');
 
 /**
  * Environment.
@@ -44,17 +44,22 @@ function api(opts) {
 
   app.use(responseTime());
 
+  // static server
+
+  if ('development' != env) {
+    app.use(staticCache(path.join(__dirname, 'static'), {
+      maxAge: 30 * 24 * 60 * 60
+    }));
+  }
+  else {
+    app.use(staticCache(path.join(__dirname, 'static'), {
+      dynamic: true
+    }));
+  }
+
   // compression
 
   app.use(compress());
-
-  // rate limiting
-
-  app.use(ratelimit({
-    max: opts.ratelimit,
-    duration: opts.duration,
-    db: redis.createClient()
-  }));
 
   // routing
 
